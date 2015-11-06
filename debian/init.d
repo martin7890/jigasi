@@ -17,9 +17,13 @@
 if [ -f /etc/jitsi/jigasi/config ]; then
     . /etc/jitsi/jigasi/config
 fi
+# We have the same config in jvb and in jigasi config
+# make sure we use the one from jigasi
+JIGASI_JAVA_SYS_PROPS=${JAVA_SYS_PROPS}
 if [ -f /etc/jitsi/videobridge/config ]; then
     . /etc/jitsi/videobridge/config
 fi
+JAVA_SYS_PROPS=${JIGASI_JAVA_SYS_PROPS}
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/share/jigasi/jigasi.sh
@@ -71,7 +75,7 @@ start() {
     echo -n "Starting $DESC: "
 
     start-stop-daemon --start --quiet --background --chuid $USER --make-pidfile --pidfile $PIDFILE \
-        --exec /bin/bash -- -c "exec $DAEMON $DAEMON_OPTS > $LOGFILE 2>&1"
+        --exec /bin/bash -- -c "JAVA_SYS_PROPS=\"$JAVA_SYS_PROPS\" exec $DAEMON $DAEMON_OPTS > $LOGFILE 2>&1"
 
     echo "$NAME started."
 }

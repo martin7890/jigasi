@@ -36,6 +36,13 @@ case "$1" in
             fi
         fi
 
+        JICOFO_JAVA_SYS_PROPS_EXIST="true"
+        # let's check whether there is a setting in the $CONFIG
+        # for home folder and logging props file
+        if [ ! -n "$JAVA_SYS_PROPS" ]; then
+            JICOFO_JAVA_SYS_PROPS_EXIST="false"
+        fi
+
         # use any old config found
         if [ -f "/etc/default/jitsi-videobridge" ]; then
             . /etc/default/jitsi-videobridge
@@ -63,6 +70,14 @@ case "$1" in
             echo "JIGASI_SIPUSER=$JIGASI_SIPUSER" >> $CONFIG
             echo "JIGASI_SIPPWD=$JIGASI_SIPPWD" >> $CONFIG
             echo "JIGASI_SECRET=$JIGASI_SECRET" >> $CONFIG
+        fi
+
+        # let's check whether there is a setting in the $CONFIG
+        # logging props file, if missing add it
+        if [ "$JICOFO_JAVA_SYS_PROPS_EXIST" = "false" ]; then
+            echo >> $CONFIG
+            echo '# adds java system props that are passed to jigasi (default are for logging config file)' >> $CONFIG
+            echo "JAVA_SYS_PROPS=\"-Djava.util.logging.config.file=/etc/jitsi/jigasi/logging.properties\"" >> $CONFIG
         fi
 
         # we don't want to start the daemon as root
@@ -101,7 +116,9 @@ case "$1" in
         if ls /var/log/jitsi/jigasi* 1>/dev/null 2>&1 ;then
             chown -f -R $OWNER:$GROUP /var/log/jitsi/jigasi*
             chmod -f -R 640 /var/log/jitsi/jigasi*
-            find /var/log/jitsi/jigasi -type d -exec chmod 750 '{}' \;
+            if [ -d /var/log/jitsi/jigasi ]; then
+                find /var/log/jitsi/jigasi -type d -exec chmod 750 '{}' \;
+            fi
         fi
 
         # populate the config with debconf values
