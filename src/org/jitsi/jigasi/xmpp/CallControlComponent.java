@@ -18,8 +18,10 @@
 package org.jitsi.jigasi.xmpp;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.rayo.*;
+import net.java.sip.communicator.service.protocol.media.*;
+import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.util.*;
-
+import java.util.*;
 import org.dom4j.*;
 import org.jitsi.jigasi.*;
 import org.jitsi.meet.*;
@@ -273,6 +275,97 @@ public class CallControlComponent
                 //hangupMap.put(gateway, smackIq.getFrom());
 
                 session.hangUp();
+
+                org.jivesoftware.smack.packet.IQ result
+                    = org.jivesoftware.smack.packet.IQ.createResultIQ(smackIq);
+
+                return IQUtils.convert(result);
+            }
+            else if (smackIq instanceof RayoIqProvider.HoldIq)
+            {
+                RayoIqProvider.HoldIq hold
+                    = (RayoIqProvider.HoldIq) smackIq;
+
+                String callUri = hold.getTo();
+                String callResource = callUri;
+
+                GatewaySession session = gateway.getSession(callResource);
+                logger.info("Got hold request for " + callResource);
+
+                OperationSetBasicTelephony<?> callTelephony = gateway.getSipProvider()
+                    .getOperationSet(OperationSetBasicTelephony.class);
+                String peerAddress = session.getJvbConference().getXmppProvider()
+                    .getAccountID().getAccountPropertyString(callResource);
+                Iterator<? extends CallPeer> callPeers = session.getSipCall().getCallPeers();
+                while (callPeers.hasNext())
+                {
+                    CallPeer peer = callPeers.next();
+                    if (peer.getAddress().equals(peerAddress))
+                    {
+                        callTelephony.putOnHold(peer);
+                        break;
+                    }
+                }
+                org.jivesoftware.smack.packet.IQ result
+                    = org.jivesoftware.smack.packet.IQ.createResultIQ(smackIq);
+
+                return IQUtils.convert(result);
+            }
+            else if (smackIq instanceof RayoIqProvider.UnHoldIq)
+            {
+                RayoIqProvider.UnHoldIq unHold
+                    = (RayoIqProvider.UnHoldIq) smackIq;
+
+                String callUri = unHold.getTo();
+                String callResource = callUri;
+
+                GatewaySession session = gateway.getSession(callResource);
+                logger.info("Got unhold request for " + callResource);
+
+                OperationSetBasicTelephony<?> callTelephony = gateway.getSipProvider()
+                    .getOperationSet(OperationSetBasicTelephony.class);
+                String peerAddress = session.getJvbConference().getXmppProvider()
+                    .getAccountID().getAccountPropertyString(callResource);
+                Iterator<? extends CallPeer> callPeers = session.getSipCall().getCallPeers();
+                while (callPeers.hasNext())
+                {
+                    CallPeer peer = callPeers.next();
+                    if (peer.getAddress().equals(peerAddress))
+                    {
+                        callTelephony.putOffHold(peer);
+                        break;
+                    }
+                }
+                org.jivesoftware.smack.packet.IQ result
+                    = org.jivesoftware.smack.packet.IQ.createResultIQ(smackIq);
+
+                return IQUtils.convert(result);
+            }
+            else if (smackIq instanceof RayoIqProvider.MergeIq)
+            {
+                RayoIqProvider.MergeIq merge
+                    = (RayoIqProvider.MergeIq) smackIq;
+
+                String callUri = merge.getTo();
+                String callResource = callUri;
+                GatewaySession session = gateway.getSession(callResource);
+                logger.info("Got merge request for " + callResource);
+
+                OperationSetBasicTelephony<?> callTelephony = gateway.getSipProvider()
+                    .getOperationSet(OperationSetBasicTelephony.class);
+                Iterator<? extends Call> callsItr = callTelephony.getActiveCalls();
+                Collection<Call> calls = new ArrayList<Call>();
+                while (callsItr.hasNext())
+                {
+                    Call call = callsItr.next();
+                    calls.add(call);
+                    Iterator<? extends CallPeer> callPeers = call.getCallPeers();
+                    while (callPeers.hasNext())
+                    {
+                        CallPeer peer = callPeers.next();
+                    }
+                }
+                CallManager.mergeExistingCalls(session.getSipCall().getConference(), calls);
 
                 org.jivesoftware.smack.packet.IQ result
                     = org.jivesoftware.smack.packet.IQ.createResultIQ(smackIq);
